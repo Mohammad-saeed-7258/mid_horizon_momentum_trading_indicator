@@ -1,0 +1,240 @@
+=
+SetChartOptions(0, chartShowArrows | chartShowDates);
+SetChartBkColor(colorBlack); // Set background color of the chart
+SetChartBkGradientFill( colorDarkBlue, colorDarkGreen ); // Gradient fill background
+
+SetTitle("Advanced Trading Indicator Analysis; Monthly data; Custom Indicators used");
+
+SetChartGridColor(colorDarkGray); // Grid color setup
+EnableTextOutput(False); // Turn off text output to status line
+
+SetYAxisLabel("Price"); // Label for Y-axis
+SetXAxisLabel("Date"); // Label for X-axis
+SetXAxisStyle( styleDashed | styleNoLabel, 1, colorWhite, 2); // Style of the X-axis
+
+SetBarFillColor( IIf( C >= O, colorSeaGreen, colorOrangeRed ) ); // Green for up bars, red for down bars
+PlotOHLC(Open, High, Low, Close, "", IIf( C >= O, colorGreen, colorRed ), styleCandle); // Basic candlestick chart
+
+SetBacktestMode(backtestRegular); // Regular backtesting mode
+SetTradeDelays(1, 1, 1, 1); // Set trade delays for open, high, low, close
+SetOption("InitialEquity", 100000); // Set the initial equity for the backtest
+SetOption("FuturesMode", False); // Set whether to simulate trading in futures
+SetOption("MinShares", 1); // Minimum number of shares per trade
+SetOption("CommissionMode", 3); // Commission mode set to percent of trade
+SetOption("CommissionAmount", 0.1); // Commission percentage
+SetOption("AccountMargin", 50); // Set margin for the account
+SetOption("InterestRate", 3.5); // Annual interest rate for cash
+
+SetOption("MaxOpenPositions", 5); // Maximum number of concurrent open positions
+SetOption("UsePrevBarEquityForPosSizing", 1); // Use previous bar's equity to calculate position size
+SetOption("WorstRankHeld", 10); // Worst rank position to hold before liquidating
+
+SetOption("PriceBoundChecking", 1); // Enable checking price bound limits
+SetOption("ExtraColumnsLocation", 1); // Include extra columns in analysis report
+
+_TRACE("Chart and backtesting settings have been configured.");
+
+TimeFrameSet(inMonthly);
+
+MonthlyMA = MA(Close, 10);  // 10-month moving average
+MonthlyRSI = RSI(Close, 14); // 14-month RSI to check overbought/oversold conditions
+MonthlyATR = ATR(14);        // 14-month Average True Range for volatility
+
+MonthlyMA_expanded = TimeFrameExpand(MonthlyMA, inMonthly, expandFirst);
+MonthlyRSI_expanded = TimeFrameExpand(MonthlyRSI, inMonthly, expandFirst);
+MonthlyATR_expanded = TimeFrameExpand(MonthlyATR, inMonthly, expandFirst);
+
+TimeFrameRestore();
+
+TimeFrameSet(inWeekly);
+
+WeeklyMA = MA(Close, 20);   // 20-week moving average
+WeeklyMACD = MACD(12, 26);  // Weekly MACD
+WeeklyStoch = StochK(14, 3); // 14-week Stochastic K
+
+WeeklyMA_expanded = TimeFrameExpand(WeeklyMA, inWeekly, expandFirst);
+WeeklyMACD_expanded = TimeFrameExpand(WeeklyMACD, inWeekly, expandFirst);
+WeeklyStoch_expanded = TimeFrameExpand(WeeklyStoch, inWeekly, expandFirst);
+
+TimeFrameRestore();
+
+TimeFrameSet(inDaily);
+
+DailyEMA = EMA(Close, 50);  // 50-day exponential moving average
+DailyADX = ADX(14);         // Daily ADX to measure trend strength
+DailyRSI = RSI(Close, 14);  // Daily RSI
+
+DailyEMA_expanded = TimeFrameExpand(DailyEMA, inDaily, expandFirst);
+DailyADX_expanded = TimeFrameExpand(DailyADX, inDaily, expandFirst);
+DailyRSI_expanded = TimeFrameExpand(DailyRSI, inDaily, expandFirst);
+
+TimeFrameRestore();
+
+Buy = Cross(Close, MonthlyMA_expanded) AND Close > WeeklyMA_expanded AND DailyRSI_expanded < 30;
+Sell = Cross(MonthlyMA_expanded, Close) AND Close < WeeklyMA_expanded AND DailyRSI_expanded > 70;
+
+Plot(Close, "Price", colorDefault, styleCandle);
+Plot(MonthlyMA_expanded, "Monthly MA", colorRed, styleThick);
+Plot(WeeklyMA_expanded, "Weekly MA", colorGreen);
+Plot(DailyEMA_expanded, "Daily EMA", colorBlue);
+
+PlotShapes(IIf(Buy, shapeSquare, shapeNone), colorGreen, 0, L, Offset=-20);
+PlotShapes(IIf(Sell, shapeCircle, shapeNone), colorRed, 0, H, Offset=20);
+
+Title = StrFormat("Price: %g, Monthly MA: %g, Weekly MA: %g, Daily EMA: %g", Close, MonthlyMA_expanded, WeeklyMA_expanded, DailyEMA_expanded);
+
+ClosePrice = Close;
+OpenPrice = Open;
+HighPrice = High;
+LowPrice = Low;
+VolumeData = Volume; // Assign volume data for easier reference
+AvgVolume = MA(Volume, 20); // 20-period average volume for comparison
+
+TypicalPrice = (ClosePrice + HighPrice + LowPrice) / 3; // Typical price calculation
+MedianPrice = (HighPrice + LowPrice) / 2; // Median price calculation
+WeightedClose = (ClosePrice + HighPrice + LowPrice + ClosePrice) / 4; // Weighted close calculation
+
+TrueRange = Max(HighPrice - LowPrice, Max(Abs(HighPrice - Ref(ClosePrice, -1)), Abs(LowPrice - Ref(ClosePrice, -1))));
+ATR = ATR(14); // 14-period average true range
+
+PlusDI = PDI(14); // Positive Directional Indicator
+MinusDI = MDI(14); // Negative Directional Indicator
+ADX = ADX(14); // Average Directional Movement Index
+
+SMA20 = MA(ClosePrice, 20); // Simple Moving Average over 20 periods
+EMA50 = EMA(ClosePrice, 50); // Exponential Moving Average over 50 periods
+
+UpperBB = BBandTop(ClosePrice, 20, 2); // Upper Bollinger Band for 20 periods with 2 std deviation
+LowerBB = BBandBot(ClosePrice, 20, 2); // Lower Bollinger Band for 20 periods with 2 std deviation
+
+Fib38 = HighPrice - (HighPrice - LowPrice) * 0.382; // 38.2% Fibonacci retracement level
+Fib50 = HighPrice - (HighPrice - LowPrice) * 0.500; // 50% Fibonacci retracement level
+Fib62 = HighPrice - (HighPrice - LowPrice) * 0.618; // 61.8% Fibonacci retracement level
+
+Plot(ClosePrice, "Close Price", colorDefault, styleCandle);
+Plot(SMA20, "20 Period SMA", colorBlue);
+Plot(EMA50, "50 Period EMA", colorRed);
+Plot(UpperBB, "Upper Bollinger Band", colorBlack, styleDashed);
+Plot(LowerBB, "Lower Bollinger Band", colorBlack, styleDashed);
+
+Plot(Fib38, "38.2% Fib", colorOrange, styleLine|styleDots);
+Plot(Fib50, "50% Fib", colorOrange, styleLine|styleDots);
+Plot(Fib62, "61.8% Fib", colorOrange, styleLine|styleDots);
+
+SetTitle(StrFormat("Close: %g, Volume: %g, ATR: %g, +DI: %g, -DI: %g, ADX: %g", ClosePrice, VolumeData, ATR, PlusDI, MinusDI, ADX));
+SetChartOptions(0, chartShowArrows | chartShowDates);
+
+const int fastMA = 20; // Look-back period for the fast moving average, often used for short-term trends.
+const int slowMA = 50; // Look-back period for the slow moving average, often used to gauge the long-term market trend.
+const int verySlowMA = 200; // Additional very slow MA for very long-term trend analysis.
+
+const int rsiPeriod = 14; // Standard look-back period for RSI, measures magnitude of recent price changes.
+
+const int macdFast = 12; // Fast EMA period for MACD, captures the essence of shorter-term trends.
+const int macdSlow = 26; // Slow EMA period for MACD, captures longer-term momentum.
+const int macdSignal = 9;  // Signal line smoothing period, used to generate trading signals from MACD.
+
+const int bollingerPeriod = 20; // Standard period for Bollinger Bands, measures market volatility.
+
+const int volumeMAPeriod = 20; // Moving average period for volume, useful for identifying trends in trading volume.
+
+const int stochPeriod = 14; // Look-back period for Stochastic Oscillator, identifies overbought and oversold levels.
+
+const int adxPeriod = 14; // Period for ADX, quantifies trend strength irrespective of direction.
+
+const int cciPeriod = 20; // Commodity Channel Index period, useful for identifying new trends or cyclical conditions.
+const int atrPeriod = 14; // Average True Range period, measures market volatility through the range of price movements.
+const int momentumPeriod = 10; // Momentum indicator period, measures the rate of change in prices.
+const int williamsRPeriod = 14; // Williams %R period, momentum indicator identifying overbought and oversold levels.
+
+const float sarStep = 0.02; // Step for SAR, the rate at which the SAR point will converge to current price action.
+const float sarMaximum = 0.2; // Maximum step for SAR, prevents the SAR from getting too close to price action.
+
+const int ichimokuConversionPeriod = 9; // Tenkan-sen (conversion line) period.
+const int ichimokuBasePeriod = 26; // Kijun-sen (base line) period.
+const int ichimokuLeadingSpanBPeriod = 52; // Senkou Span B (leading span B) calculation period.
+
+Plot( MA( Close, fastMA ), "Fast MA", colorRed );
+Plot( MA( Close, slowMA ), "Slow MA", colorBlue );
+Plot( MA( Close, verySlowMA ), "Very Slow MA", colorGreen );
+
+FastMA = MA(ClosePrice, fastMA); // Simple Moving Average with a shorter look-back period for faster reaction to price changes
+SlowEMA = EMA(ClosePrice, slowMA); // Exponential Moving Average with a longer look-back period for smoother trend analysis
+
+Plot(FastMA, "Fast MA", colorBlue, styleLine);
+Plot(SlowEMA, "Slow EMA", colorRed, styleLine);
+
+RSIIndicator = RSI(ClosePrice, rsiPeriod); // Measures the speed and change of price movements in a specified period
+Plot(RSIIndicator, "RSI", colorGreen, styleHistogram | styleThick, Null, Null, 0, 2);
+
+MACDMain = MACD(macdFast, macdSlow); // The main line of the MACD, showing the difference between two exponential moving averages
+MACDSignal = Signal(macdFast, macdSlow, macdSignal); // The signal line, which is an EMA of the MACD main line
+Plot(MACDMain - MACDSignal, "MACD Histogram", colorOrange, styleHistogram | styleOwnScale, Null, Null, 0, 3);
+
+BBandTop = BBandTop(ClosePrice, bollingerPeriod, 2); // Upper Bollinger Band
+BBandBot = BBandBot(ClosePrice, bollingerPeriod, 2); // Lower Bollinger Band
+Plot(BBandTop, "Upper Bollinger Band", colorDarkGrey, styleDotted);
+Plot(BBandBot, "Lower Bollinger Band", colorDarkGrey, styleDotted);
+
+VolumeMA = MA(Volume, volumeMAPeriod); // Moving average of volume to identify increases or decreases in trading volume
+Plot(VolumeMA, "Volume MA", colorPurple, styleHistogram | styleOwnScale);
+
+StochK = StochK(stochPeriod); // The %K line of the Stochastic Oscillator, showing the current price level relative to the high/low range
+StochD = StochD(stochPeriod); // The %D line, which is a moving average of %K
+Plot(StochK, "%K Line", colorBlue, styleLine);
+Plot(StochD, "%D Line", colorRed, styleThick);
+
+ADXIndicator = ADX(adxPeriod); // Measures the strength of a trend
+Plot(ADXIndicator, "ADX", colorGold, styleThick | styleOwnScale);
+
+CCIIndicator = CCI(20); // Commodity Channel Index to determine cyclical trends
+Plot(CCIIndicator, "CCI", colorBlack, styleLine | styleOwnScale);
+
+SARIndicator = SAR(0.02, 0.2); // Parabolic SAR for identifying potential reversals in the market price direction
+Plot(SARIndicator, "Parabolic SAR", colorCyan, styleDots);
+
+ATRIndicator = ATR(14); // Measures market volatility by decomposing the entire range of asset price for that period
+Plot(ATRIndicator, "ATR", colorMagenta, styleThick);
+
+Buy = Cross(ClosePrice, FastMA) AND RSIIndicator < 30 AND Cross(MACDMain, MACDSignal) AND
+      ClosePrice > SlowEMA AND Volume > VolumeMA AND ADXIndicator > 25;
+
+Sell = Cross(FastMA, ClosePrice) AND RSIIndicator > 70 AND Cross(MACDSignal, MACDMain) AND
+       ClosePrice < SlowEMA AND Volume < VolumeMA AND ADXIndicator > 25;
+
+EnhancedBuy = Buy AND StochK > StochD AND StochK < 20;
+EnhancedSell = Sell AND StochK < StochD AND StochK > 80;
+
+Plot(ClosePrice, "Close", colorBlue, styleCandle);
+Plot(FastMA, "Fast MA", colorRed, styleLine);
+Plot(SlowEMA, "Slow EMA", colorGreen, styleLine);
+Plot(BBandTop, "Upper Bollinger Band", colorBlack, styleDashed);
+Plot(BBandBot, "Lower Bollinger Band", colorBlack, styleDashed);
+
+PlotShapes(IIf(EnhancedBuy, shapeUpArrow, shapeNone), colorGreen, 0, Low, Offset=-20);
+PlotShapes(IIf(EnhancedSell, shapeDownArrow, shapeNone), colorRed, 0, High, Offset=-20);
+
+if (EnhancedBuy[BarCount-1]) {
+    _TRACE("Enhanced Buy signal generated at Price: " + NumToStr(ClosePrice[BarCount-1], 1.2));
+}
+
+if (EnhancedSell[BarCount-1]) {
+    _TRACE("Enhanced Sell signal generated at Price: " + NumToStr(ClosePrice[BarCount-1], 1.2));
+}
+
+TimeFrameRestore();
+
+Title = EncodeColor(colorWhite) + "Advanced Trading Indicator - Monthly Analysis" + "\n" +
+        "Open: " + NumToStr(OpenPrice, 1.2) + 
+        ", High: " + NumToStr(HighPrice, 1.2) + 
+        ", Low: " + NumToStr(LowPrice, 1.2) + 
+        ", Close: " + NumToStr(ClosePrice, 1.2) + "\n" +
+        "Volume: " + WriteVal(Volume, 1.0) + "\n" +
+        "RSI(14): " + NumToStr(RSIIndicator, 1.2) + 
+        ", MACD(12,26): " + NumToStr(MACDMain - MACDSignal, 1.2) + 
+        ", ADX(14): " + NumToStr(ADXIndicator, 1.2);
+
+_TRACE("Debug Information: ");
+_TRACE("Stochastic K: " + NumToStr(StochK, 1.2));
+_TRACE("Stochastic D: " + NumToStr(StochD, 1.2));
+_TRACE("Current Volume vs MA: " + NumToStr(Volume / VolumeMA, 1.2));
